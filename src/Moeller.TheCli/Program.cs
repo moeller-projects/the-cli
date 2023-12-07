@@ -13,7 +13,7 @@ public static class Program
             {
                 var configPath = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "MOELLER/TOGGL_CLI");
+                    "MOELLER/THE_CLI");
 
                 if (!Directory.Exists(configPath))
                     Directory.CreateDirectory(configPath);

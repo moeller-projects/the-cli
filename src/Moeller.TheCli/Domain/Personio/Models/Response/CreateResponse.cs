@@ -3,11 +3,8 @@ using Newtonsoft.Json;
 
 namespace Moeller.TheCli.Domain.Personio.Models.Response
 {
-    public class CreateResponse
+    public class CreateResponse : BaseResponse
     {
-        [JsonProperty(PropertyName = "success")]
-        public bool Success { get; set; }
-
         [JsonProperty(PropertyName = "statusCode")]
         public HttpStatusCode StatusCode { get; set; }
 

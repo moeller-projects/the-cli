@@ -9,7 +9,15 @@ public static class IConsoleExtesnions
     {
         using (console.WithForegroundColor(ConsoleColor.Green))
         {
-            return console.Output.WriteLineAsync(Prompt.Symbols.Done.ToString() + " Successful!");
+            return console.Output.WriteLineAsync($"{Prompt.Symbols.Done} Successful!");
+        }
+    }
+    
+    public static Task RespondWithFailureAsync(this IConsole console, string message, Exception exception = null)
+    {
+        using (console.WithForegroundColor(ConsoleColor.Red))
+        {
+            return console.Output.WriteLineAsync($"{Prompt.Symbols.Error} Error: {message}");
         }
     }
 }

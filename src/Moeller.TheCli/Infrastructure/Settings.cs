@@ -13,12 +13,14 @@ public class Settings
         PersonioSettings = personioSettings;
     }
 
-    public TogglSettings? TogglSettings { get; }
-    public PersonioSettings? PersonioSettings { get; }
+    public TogglSettings? TogglSettings { get; set; }
+    public PersonioSettings? PersonioSettings { get; set; }
 }
 
 public class TogglSettings
 {
+    public const string DATE_TIME_FORMAT = "MM/dd/yyyy HH:mm:ss";
+    
     public string? ApiToken { get; init; }
     public int DefaultWorkSpace { get; init; }
 }

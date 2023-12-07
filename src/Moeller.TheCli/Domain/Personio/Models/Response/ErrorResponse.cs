@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Moeller.TheCli.Domain.Personio.Models.Response
 {
@@ -18,5 +19,8 @@ namespace Moeller.TheCli.Domain.Personio.Models.Response
 
         [JsonProperty(PropertyName = "error_data")]
         public Dictionary<string, object> ErrorData { get; set; }
+        
+        [JsonProperty(PropertyName = "detailed_message")]
+        public JArray? DetailedMessage { get; set; }
     }
 }

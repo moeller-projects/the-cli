@@ -8,8 +8,8 @@ namespace Moeller.TheCli.Domain.Personio.Models
         [JsonProperty(PropertyName = "employee")]
         public int EmployeeId { get; set; }
 
-        [JsonProperty(PropertyName = "date"), JsonConverter(typeof(DateFormatConverter))]
-        public DateTime Date { get; set; }
+        [JsonProperty(PropertyName = "date"), JsonConverter(typeof(DateOnlyConverter))]
+        public DateOnly Date { get; set; }
 
         [JsonProperty(PropertyName = "start_time"), JsonConverter(typeof(TimeSpanConverter))]
         public TimeSpan StartTime { get; set; }

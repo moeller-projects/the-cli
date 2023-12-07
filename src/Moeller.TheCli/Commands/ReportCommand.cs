@@ -1,3 +1,4 @@
+using System.Globalization;
 using CliFx;
 using CliFx.Attributes;
 using CliFx.Infrastructure;
@@ -12,34 +13,34 @@ namespace Moeller.TheCli.Commands;
 [Command("report yesterday", Description = "todo")]
 public class ReportYesterdayCommand : ICommand
 {
-    private readonly ReportCommand _ReportCommand;
+    private readonly ReportCommand _Command;
 
-    public ReportYesterdayCommand(ReportCommand reportCommand)
+    public ReportYesterdayCommand(ReportCommand command)
     {
-        _ReportCommand = reportCommand;
+        _Command = command;
     }
 
     public ValueTask ExecuteAsync(IConsole console)
     {
-        _ReportCommand.Date = DateOnly.FromDateTime(DateTime.Today.AddDays(-1));
-        return _ReportCommand.ExecuteAsync(console);
+        _Command.Date = DateOnly.FromDateTime(DateTime.Today.AddDays(-1));
+        return _Command.ExecuteAsync(console);
     }
 }
 
 [Command("report today", Description = "todo")]
 public class ReportTodayCommand : ICommand
 {
-    private readonly ReportCommand _ReportCommand;
+    private readonly ReportCommand _Command;
 
-    public ReportTodayCommand(ReportCommand reportCommand)
+    public ReportTodayCommand(ReportCommand command)
     {
-        _ReportCommand = reportCommand;
+        _Command = command;
     }
 
     public ValueTask ExecuteAsync(IConsole console)
     {
-        _ReportCommand.Date = DateOnly.FromDateTime(DateTime.Today);
-        return _ReportCommand.ExecuteAsync(console);
+        _Command.Date = DateOnly.FromDateTime(DateTime.Today);
+        return _Command.ExecuteAsync(console);
     }
 }
 
@@ -77,11 +78,13 @@ public class ReportCommand : ICommand
 
         var table = timeEntries.OrderBy(e => e.Id).Select(e =>
         {
+            DateTime? start = DateTime.TryParseExact(e.Start, TogglSettings.DATE_TIME_FORMAT, null, DateTimeStyles.None, out var parsedStart) ? parsedStart : null;
+            DateTime? stop = DateTime.TryParseExact(e.Stop, TogglSettings.DATE_TIME_FORMAT, null, DateTimeStyles.None, out var parsedStop) ? parsedStop : null;
             return new
             {
                 Description = e.Description,
-                Start = e.Start,
-                Stop = e.Stop,
+                Start = start,
+                Stop = stop,
                 Duration = e.Duration is null or < 0 ? "running..." : TimeSpan.FromSeconds(e.Duration.GetValueOrDefault()).ToString("hh\\hmm\\m"),
                 Tags = e.TagNames is not null && e.TagNames.Any() ? string.Join(", ", e.TagNames) : null
             };
@@ -89,8 +92,8 @@ public class ReportCommand : ICommand
         table.Add(new
         {
             Description = "SUM",
-            Start = string.Empty,
-            Stop = string.Empty,
+            Start = null as DateTime?,
+            Stop = null as DateTime?,
             Duration = TimeSpan.FromSeconds(timeEntries.Sum(e => e.Duration is not null && e.Duration.Value >= 0 ? e.Duration.GetValueOrDefault() : 0)).ToString("hh\\hmm\\m"),
             Tags = string.Empty
         });

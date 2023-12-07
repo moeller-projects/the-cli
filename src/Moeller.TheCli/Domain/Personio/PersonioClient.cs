@@ -286,12 +286,18 @@ namespace Moeller.TheCli.Domain.Personio
                 /// be a list of attendance periods, in the form of an array containing 
                 /// attendance period objects.
                 /// </summary>
-                public async Task<CreateResponse> CreateAttendancesAsync(AddAttendancesRequest request)
+                public async Task<bool> CreateAttendancesAsync(AddAttendancesRequest request)
                 {
                     var content = new StringContent(JsonConvert.SerializeObject(request), Encoding.UTF8, "application/json");
                     var response = await _postClient.PostAsync("https://api.personio.de/v1/company/attendances", content);
-                    var result = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<CreateResponse>(result);
+                    var json = response.Content.ReadAsStringAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                    var createResponse = JsonConvert.DeserializeObject<CreateResponse>(json);
+                    if (!createResponse.Success)
+                    {
+                        createResponse.StatusCode = response.StatusCode;
+                        return CreateResponse.FromError<IEnumerable<Attendance>>(createResponse);
+                    }
+                    return CreateResponse.FromData(createResponse.Data, response.StatusCode);
                 }
 
                 /// <summary>
