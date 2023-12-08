@@ -35,7 +35,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: nupkg
-        path: src/Moeller.TheCli/nupkg/*.nupkg
+        path: src/Moeller.TheCli/bin/nupkg/*.nupkg
 
   publish:
     runs-on: ubuntu-latest
