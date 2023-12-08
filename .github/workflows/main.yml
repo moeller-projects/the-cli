@@ -50,7 +50,7 @@ jobs:
           name: nupkg
 
       - name: 🔑 Authenticate to GitHub Packages
-        run: dotnet nuget add source --username rprouse --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/rprouse/index.json"
+        run: dotnet nuget add source --username moeller-projects --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/moeller-projects/index.json"
 
       - name: 📤 Publish NuGet to GitHub Packages
-        run: dotnet nuget push "**/dotnet-todo.*.nupkg" -k ${{ secrets.GITHUB_TOKEN }} --source "github" --skip-duplicate --no-symbols
+        run: dotnet nuget push "**/Moeller.TheCli.*.nupkg" -k ${{ secrets.GITHUB_TOKEN }} --source "github" --skip-duplicate --no-symbols
