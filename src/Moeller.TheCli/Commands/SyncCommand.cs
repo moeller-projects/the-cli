@@ -2,6 +2,7 @@ using CliFx;
 using CliFx.Attributes;
 using CliFx.Infrastructure;
 using Moeller.TheCli.Domain;
+using Moeller.TheCli.Domain.Models;
 using Moeller.TheCli.Domain.Personio;
 using Moeller.TheCli.Domain.Personio.Configuration;
 using Moeller.TheCli.Domain.Personio.Models;

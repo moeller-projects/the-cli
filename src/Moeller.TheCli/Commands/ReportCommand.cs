@@ -79,32 +79,38 @@ public class ReportCommand : ICommand
         }
 
         var timeEntries = await GetTimeEntries(From.Value.ToDateTime(TimeOnly.MinValue), To.Value.ToDateTime(TimeOnly.MinValue));
-        var table = timeEntries.OrderBy(e => e.Id).Select(e =>
-        {
-            DateTime? start = DateTime.TryParseExact(e.Start, TogglSettings.DATE_TIME_FORMAT, null, DateTimeStyles.None, out var parsedStart) ? parsedStart : null;
-            DateTime? stop = DateTime.TryParseExact(e.Stop, TogglSettings.DATE_TIME_FORMAT, null, DateTimeStyles.None, out var parsedStop) ? parsedStop : null;
-            return new
+
+        var tables = timeEntries
+            .Select(e =>
             {
-                Description = e.Description,
-                Start = start,
-                Stop = stop,
-                Duration = e.Duration is null or < 0 ? "running..." : TimeSpan.FromSeconds(e.Duration.GetValueOrDefault()).ToString("hh\\hmm\\m"),
-                Tags = e.TagNames is not null && e.TagNames.Any() ? string.Join(", ", e.TagNames) : null
-            };
-        }).ToList();
-        table.Add(new
+                DateTime? start = DateTime.TryParseExact(e.Start, TogglSettings.DATE_TIME_FORMAT, null, DateTimeStyles.None, out var parsedStart) ? parsedStart : null;
+                DateTime? stop = DateTime.TryParseExact(e.Stop, TogglSettings.DATE_TIME_FORMAT, null, DateTimeStyles.None, out var parsedStop) ? parsedStop : null;
+                return new
+                {
+                    Description = e.Description,
+                    Start = start,
+                    Stop = stop,
+                    Duration = e.Duration is null or < 0 ? "running..." : TimeSpan.FromSeconds(e.Duration.GetValueOrDefault()).ToString("hh\\hmm\\m"),
+                    Tags = e.TagNames is not null && e.TagNames.Any() ? string.Join(", ", e.TagNames) : null
+                };
+            }).GroupBy(g => DateOnly.FromDateTime(g.Start.GetValueOrDefault()));
+
+        foreach (var table in tables)
         {
-            Description = "SUM",
-            Start = null as DateTime?,
-            Stop = null as DateTime?,
-            Duration = TimeSpan.FromSeconds(timeEntries.Sum(e => e.Duration is not null && e.Duration.Value >= 0 ? e.Duration.GetValueOrDefault() : 0)).ToString("hh\\hmm\\m"),
-            Tags = string.Empty
-        });
-        
-        ConsoleTableBuilder
-            .From(table)
-            .WithFormat(ConsoleTableBuilderFormat.Minimal)
-            .ExportAndWriteLine();
+            var totalDuration = table
+                .Select(e => e.Stop - e.Start)
+                .Aggregate((aggregated, current) => aggregated + current)
+                .GetValueOrDefault();
+
+            ConsoleTableBuilder
+                .From(table.OrderBy(o => o.Start).ThenBy(o => o.Stop).ToList())
+                .WithTitle(table.Key.ToString(), ConsoleColor.Magenta, TextAligntment.Left)
+                .WithFormat(ConsoleTableBuilderFormat.Alternative)
+                .AddRow("TOTAL", null, null, totalDuration.ToString("hh\\hmm\\m"), null)
+                .ExportAndWriteLine();
+
+            await console.Output.WriteLineAsync();
+        }
     }
 
     private async ValueTask<List<TimeEntry>> GetTimeEntries(DateTime from, DateTime to)

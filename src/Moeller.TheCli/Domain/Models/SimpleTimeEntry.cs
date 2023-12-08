@@ -2,7 +2,7 @@ using System.Globalization;
 using Moeller.TheCli.Infrastructure;
 using Toggl;
 
-namespace Moeller.TheCli.Domain.Personio.Models;
+namespace Moeller.TheCli.Domain.Models;
 
 public class SimpleTimeEntry
 {
