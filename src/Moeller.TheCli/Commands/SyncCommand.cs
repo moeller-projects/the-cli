@@ -1,4 +1,3 @@
-using System.Globalization;
 using CliFx;
 using CliFx.Attributes;
 using CliFx.Infrastructure;
@@ -7,11 +6,12 @@ using Moeller.TheCli.Domain.Personio;
 using Moeller.TheCli.Domain.Personio.Configuration;
 using Moeller.TheCli.Domain.Personio.Models;
 using Moeller.TheCli.Domain.Personio.Models.Request;
-using Moeller.TheCli.Domain.Personio.Models.Response;
 using Moeller.TheCli.Infrastructure;
 using Moeller.TheCli.Infrastructure.Extensions;
+using Sharprompt;
 using Toggl;
 using Toggl.QueryObjects;
+using Task = System.Threading.Tasks.Task;
 
 namespace Moeller.TheCli.Commands;
 
@@ -80,10 +80,29 @@ public class SyncCommand : ICommand
         }
         
         var timeEntries = await GetTimeEntries(console, From.Value.ToDateTime(TimeOnly.MinValue), To.Value.ToDateTime(TimeOnly.MinValue));
-        await CheckForExistingAttendances(console, From.Value.ToDateTime(TimeOnly.MinValue), To.Value.ToDateTime(TimeOnly.MinValue));
+        await DeleteExistingTimeEntries(console, From.Value.ToDateTime(TimeOnly.MinValue), To.Value.ToDateTime(TimeOnly.MinValue));
         await SyncTimeEntriesToPersonio(console, timeEntries);
     }
-    
+
+    private async Task DeleteExistingTimeEntries(IConsole console, DateTime from, DateTime to)
+    {
+        var personioClient = await GetPersonioClient(console);
+        var existingAttendances = await personioClient.GetAttendancesAsync(new GetAttendencesRequest
+        {
+            StartDate = from,
+            EndDate = to,
+            Limit = 200,
+            Offset = 0,
+            EmployeeIds = new []{_Settings.PersonioSettings.EmployeeId}
+        });
+
+        if (existingAttendances?.PagedList.TotalElements > 0)
+        {
+            var deleteTasks = existingAttendances.PagedList.Data.Select(async a => await _PersonioClient.DeleteAttendancesAsync(a.Id, true)).ToArray();
+            Task.WaitAll(deleteTasks);
+        }
+    }
+
     private async ValueTask<List<TimeEntry>> GetTimeEntries(IConsole console, DateTime from, DateTime to)
     {
         var togglClient = await GetTogglClient(console);
@@ -132,35 +151,44 @@ public class SyncCommand : ICommand
     private async ValueTask SyncTimeEntriesToPersonio(IConsole console, IEnumerable<TimeEntry> timeEntries)
     {
         var personioClient = await GetPersonioClient(console);
-        var attendances = timeEntries
-            .Where(e => !string.IsNullOrWhiteSpace(e.Start) && !string.IsNullOrWhiteSpace(e.Stop) && e.Duration.GetValueOrDefault() > 0)
-            .Select(e =>
-            {
-                var start = DateTime.TryParseExact(e.Start, TogglSettings.DATE_TIME_FORMAT, null, DateTimeStyles.AssumeLocal, out var parsedStart) ? parsedStart : DateTime.MinValue;
-                var stop = DateTime.TryParseExact(e.Stop, TogglSettings.DATE_TIME_FORMAT, null, DateTimeStyles.AssumeLocal, out var parsedStop) ? parsedStop : DateTime.MinValue;
-                return new Attendance
-                {
-                    EmployeeId = _Settings.PersonioSettings.EmployeeId,
-                    Comment = e.Description,
-                    Date = DateOnly.FromDateTime(start),
-                    StartTime = new TimeSpan(start.Hour, start.Minute, start.Second),
-                    EndTime = new TimeSpan(stop.Hour, stop.Minute, stop.Second),
-                    Break = 0
-                };
-            }).ToArray();
+        var attendances = ConvertToAttendances(timeEntries);
         await personioClient.CreateAttendancesAsync(new AddAttendancesRequest() {SkipApproval = true, Attendances = attendances});
     }
-    
-    private async ValueTask CheckForExistingAttendances(IConsole console, DateTime from, DateTime to)
+
+    private IEnumerable<Attendance> ConvertToAttendances(IEnumerable<TimeEntry> timeEntries)
     {
-        var personioClient = await GetPersonioClient(console);
-        await personioClient.GetAttendancesAsync(new GetAttendencesRequest()
+        var simpleTimeEntries = timeEntries
+            .Where(e => !string.IsNullOrWhiteSpace(e.Start) && !string.IsNullOrWhiteSpace(e.Stop) && e.Duration.GetValueOrDefault() > 0)
+            .Select(e => (SimpleTimeEntry) e)
+            .OrderBy(e => e.Start).ThenBy(e => e.Stop)
+            .ToArray();
+        
+        var groupedTimeEntries = new List<List<SimpleTimeEntry>>();
+        var group1 = new List<SimpleTimeEntry>() {simpleTimeEntries[0]};
+        groupedTimeEntries.Add(group1);
+
+        var last = simpleTimeEntries[0];
+        for (var i = 1; i < simpleTimeEntries.Length; i++)
         {
-            StartDate = from,
-            EndDate = to,
-            Limit = 200,
-            Offset = 0,
-            EmployeeIds = new []{_Settings.PersonioSettings.EmployeeId}
+            var current = simpleTimeEntries[i];
+            var timeDiff = current.Start - last.Stop;
+            var isNewGroup = timeDiff.TotalMinutes > 5;
+            if (isNewGroup)
+            {
+                groupedTimeEntries.Add(new List<SimpleTimeEntry>());
+            }
+
+            groupedTimeEntries.Last().Add(current);
+            last = current;
+        }
+
+        return groupedTimeEntries.Select(e => new Attendance()
+        {
+            EmployeeId = _Settings.PersonioSettings.EmployeeId,
+            Date = e.Min(ste => DateOnly.FromDateTime(ste.Start)),
+            StartTime = e.Min(m => new TimeSpan(m.Start.Hour, m.Start.Minute, m.Start.Second)),
+            EndTime = e.Max(m => new TimeSpan(m.Stop.Hour, m.Stop.Minute, m.Stop.Second)),
+            Break = 0
         });
     }
 }

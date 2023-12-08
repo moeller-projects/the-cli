@@ -44,17 +44,21 @@ public class ReportTodayCommand : ICommand
     }
 }
 
-
 [Command("report", Description = "todo")]
 public class ReportCommand : ICommand
 {
-    [CommandParameter(0, Name = "Date", IsRequired = false)] public DateOnly? Date { get; set; }
-    [CommandOption("from", 'f', Description = "From")] public DateOnly? From { get; set; }
-    [CommandOption("to", 't', Description = "To")] public DateOnly? To { get; set; }
-    
-    
+    [CommandParameter(0, Name = "Date", IsRequired = false)]
+    public DateOnly? Date { get; set; }
+
+    [CommandOption("from", 'f', Description = "From")]
+    public DateOnly? From { get; set; }
+
+    [CommandOption("to", 't', Description = "To")]
+    public DateOnly? To { get; set; }
+
+
     private readonly Settings _Settings;
-    
+
     public ReportCommand(ConfigurationProvider provider)
     {
         _Settings = provider.Get();
@@ -73,9 +77,8 @@ public class ReportCommand : ICommand
             From = Date.Value;
             To = Date.Value.AddDays(1);
         }
-        
-        var timeEntries = await GetTimeEntries(From.Value.ToDateTime(TimeOnly.MinValue), To.Value.ToDateTime(TimeOnly.MinValue));
 
+        var timeEntries = await GetTimeEntries(From.Value.ToDateTime(TimeOnly.MinValue), To.Value.ToDateTime(TimeOnly.MinValue));
         var table = timeEntries.OrderBy(e => e.Id).Select(e =>
         {
             DateTime? start = DateTime.TryParseExact(e.Start, TogglSettings.DATE_TIME_FORMAT, null, DateTimeStyles.None, out var parsedStart) ? parsedStart : null;
@@ -103,7 +106,7 @@ public class ReportCommand : ICommand
             .WithFormat(ConsoleTableBuilderFormat.Minimal)
             .ExportAndWriteLine();
     }
-    
+
     private async ValueTask<List<TimeEntry>> GetTimeEntries(DateTime from, DateTime to)
     {
         var togglClient = new TogglAsync(_Settings?.TogglSettings?.ApiToken);

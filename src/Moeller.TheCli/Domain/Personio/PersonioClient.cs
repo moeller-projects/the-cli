@@ -7,6 +7,7 @@ using Moeller.TheCli.Domain.Personio.Models;
 using Moeller.TheCli.Domain.Personio.Models.Attributes;
 using Moeller.TheCli.Domain.Personio.Models.Request;
 using Moeller.TheCli.Domain.Personio.Models.Response;
+using Moeller.TheCli.Domain.Personio.Util;
 using Newtonsoft.Json;
 
 namespace Moeller.TheCli.Domain.Personio
@@ -253,28 +254,74 @@ namespace Moeller.TheCli.Domain.Personio
                 /// updated, and/or specific employee/employees. The result 
                 /// contains a list of attendances.
                 /// </summary>
-                public async Task GetAttendancesAsync(GetAttendencesRequest request)
+                public async ValueTask<PagedListResponse<Attendance>> GetAttendancesAsync(GetAttendencesRequest request)
                 {
                     var url = $"https://api.personio.de/v1/company/attendances?start_date={request.StartDate.ToString(Constants.DATE_FORMAT)}&end_date={request.EndDate.ToString(Constants.DATE_FORMAT)}&limit={request.Limit}&offset={request.Offset}";
                     if (request.UpdatedFrom.HasValue)
-                    {
                         url += $"updated_from={request.UpdatedFrom.Value.ToString(Constants.DATE_FORMAT)}";
-                    }
 
                     if (request.UpdatedTo.HasValue)
-                    {
                         url += $"updated_to={request.UpdatedTo.Value.ToString(Constants.DATE_FORMAT)}";
-                    }
 
                     if (request.EmployeeIds != null && request.EmployeeIds.Any())
-                    {
-                        foreach (var employeeId in request.EmployeeIds)
-                        {
-                            url += $"&employees[]={employeeId}";
-                        }
-                    }
+                        url = request.EmployeeIds.Aggregate(url, (current, employeeId) => current + $"&employees[]={employeeId}");
 
-                    var result = await _getClient.GetStringAsync(url);
+                    var response = _getClient.GetAsync(url).ConfigureAwait(false).GetAwaiter().GetResult();
+                    var responseContent = response.Content.ReadAsStringAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        var errorData = JsonConvert.DeserializeObject<ErrorResponse>(responseContent);
+                        return new PagedListResponse<Attendance>()
+                        {
+                            StatusCode = response.StatusCode,
+                            ReasonPhrase = response.ReasonPhrase,
+                            Error = errorData.Error
+                        };
+                    }
+                    try
+                    {
+                        var data = JsonConvert.DeserializeObject<GetAttendancesResponse>(responseContent, new JsonSerializerSettings()
+                        {
+                            NullValueHandling = NullValueHandling.Ignore
+                        });
+                        
+                        var pagedList = new PagedList<Attendance>();
+                        pagedList.Data = data.Data?.Select(x =>
+                        {
+                            var attendance = (Attendance) x.Attributes;
+                            attendance.Id = x.Id;
+                            return attendance;
+                        })?.ToList();
+                        pagedList.Offset = data.Offset;
+                        pagedList.Limit = data.Limit;
+                        pagedList.TotalElements = data.Metadata?.TotalElements ?? 0;
+                        pagedList.CurrentPage = data.Metadata?.CurrentPage ?? 0;
+                        pagedList.TotalPages = data.Metadata?.TotalPages ?? 0;
+                        
+                        return new PagedListResponse<Attendance>()
+                        {
+                            StatusCode = response.StatusCode,
+                            ReasonPhrase = response.ReasonPhrase,
+                            PagedList = pagedList
+                        };
+                    }
+                    catch (Exception e)
+                    {
+                        return new PagedListResponse<Attendance>()
+                        {
+                            StatusCode = response.StatusCode,
+                            ReasonPhrase = response.ReasonPhrase,
+                            Error = new Error()
+                            {
+                                Message = e.Message,
+                                ErrorData = new Dictionary<string, object>()
+                                {
+                                    { "StackTrace", e.StackTrace }
+                                }
+                            },
+                            Raw = responseContent
+                        };
+                    }
                 }
 
                 /// <summary>
@@ -286,16 +333,16 @@ namespace Moeller.TheCli.Domain.Personio
                 /// be a list of attendance periods, in the form of an array containing 
                 /// attendance period objects.
                 /// </summary>
-                public async Task<bool> CreateAttendancesAsync(AddAttendancesRequest request)
+                public async Task<CreateResponse<BatchResponse>> CreateAttendancesAsync(AddAttendancesRequest request)
                 {
                     var content = new StringContent(JsonConvert.SerializeObject(request), Encoding.UTF8, "application/json");
                     var response = await _postClient.PostAsync("https://api.personio.de/v1/company/attendances", content);
                     var json = response.Content.ReadAsStringAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-                    var createResponse = JsonConvert.DeserializeObject<CreateResponse>(json);
+                    var createResponse = JsonConvert.DeserializeObject<CreateResponse<BatchResponse>>(json);
                     if (!createResponse.Success)
                     {
                         createResponse.StatusCode = response.StatusCode;
-                        return CreateResponse.FromError<IEnumerable<Attendance>>(createResponse);
+                        return CreateResponse.FromError<BatchResponse>(createResponse);
                     }
                     return CreateResponse.FromData(createResponse.Data, response.StatusCode);
                 }
@@ -305,9 +352,9 @@ namespace Moeller.TheCli.Domain.Personio
                 /// 
                 /// This endpoint is responsible for deleting attendance data for the company employees.
                 /// </summary>
-                public async Task<DeleteResponse> DeleteAttendancesAsync(int id, bool skipAPproval = true)
+                public async Task<DeleteResponse> DeleteAttendancesAsync(long id, bool skipApproval = true)
                 {
-                    var response = await _getClient.DeleteAsync($"https://api.personio.de/v1/company/attendances/{id}?skip_approval={skipAPproval}");
+                    var response = await _getClient.DeleteAsync($"https://api.personio.de/v1/company/attendances/{id}?skip_approval={skipApproval.ToString().ToLowerInvariant()}");
                     var result = await response.Content.ReadAsStringAsync();
                     return JsonConvert.DeserializeObject<DeleteResponse>(result);
                 }

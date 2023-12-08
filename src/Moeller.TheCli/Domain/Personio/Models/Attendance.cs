@@ -5,6 +5,9 @@ namespace Moeller.TheCli.Domain.Personio.Models
 {
     public class Attendance
     {
+        [JsonProperty(PropertyName = "id")]
+        public long Id { get; set; }
+        
         [JsonProperty(PropertyName = "employee")]
         public int EmployeeId { get; set; }
 

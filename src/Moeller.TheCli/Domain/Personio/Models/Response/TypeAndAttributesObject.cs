@@ -4,13 +4,16 @@ namespace Moeller.TheCli.Domain.Personio.Models.Response
 {
     public class TypeAndAttributesObject<T>
     {
+        [JsonProperty(PropertyName = "id")]
+        public long Id { get; set; }
+        
         [JsonProperty(PropertyName = "type")]
         public string Type { get; set; }
 
         [JsonProperty(PropertyName = "attributes")]
         public T Attributes { get; set; }
     }
-
+    
     public class AttributeObject<T>
     {
         [JsonProperty(PropertyName = "label")]
