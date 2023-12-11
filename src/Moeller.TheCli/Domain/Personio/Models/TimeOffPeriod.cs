@@ -8,10 +8,10 @@ namespace Moeller.TheCli.Domain.Personio.Models
         public int Id { get; set; }
 
         [JsonProperty(PropertyName = "status")]
-        public string Status { get; set; }
+        public string? Status { get; set; }
 
         [JsonProperty(PropertyName = "comment")]
-        public string Comment { get; set; }
+        public string? Comment { get; set; }
 
         [JsonProperty(PropertyName = "start_date")]
         public DateTimeOffset StartDate { get; set; }
@@ -39,7 +39,7 @@ namespace Moeller.TheCli.Domain.Personio.Models
         public int EmployeeId { get; set; }
 
         [JsonProperty(PropertyName = "created_by")]
-        public string CreatedBy { get; set; }
+        public string? CreatedBy { get; set; }
 
         [JsonProperty(PropertyName = "created_at")]
         public DateTimeOffset CreatedAt { get; set; }

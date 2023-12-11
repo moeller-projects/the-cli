@@ -16,6 +16,6 @@ namespace Moeller.TheCli.Domain.Personio.Models.Request
         /// array of objects
         /// </summary>
         [JsonProperty(PropertyName = "attendances")]
-        public IEnumerable<Attendance> Attendances { get; set; }
+        public IEnumerable<Attendance>? Attendances { get; set; }
     }
 }

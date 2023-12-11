@@ -1,12 +1,13 @@
 using System.Globalization;
 using CliFx;
 using CliFx.Attributes;
-using CliFx.Infrastructure;
 using ConsoleTableExt;
 using Moeller.TheCli.Domain;
 using Moeller.TheCli.Infrastructure;
 using Toggl;
 using Toggl.QueryObjects;
+using IConsole = CliFx.Infrastructure.IConsole;
+using Task = System.Threading.Tasks.Task;
 
 namespace Moeller.TheCli.Commands;
 
@@ -45,7 +46,7 @@ public class ReportTodayCommand : ICommand
 }
 
 [Command("report", Description = "todo")]
-public class ReportCommand : ICommand
+public class ReportCommand : CommandBase, ICommand
 {
     [CommandParameter(0, Name = "Date", IsRequired = false)]
     public DateOnly? Date { get; set; }
@@ -56,13 +57,8 @@ public class ReportCommand : ICommand
     [CommandOption("to", 't', Description = "To")]
     public DateOnly? To { get; set; }
 
-
-    private readonly Settings _Settings;
-
-    public ReportCommand(ConfigurationProvider provider)
-    {
-        _Settings = provider.Get();
-    }
+    public ReportCommand(ConfigurationProvider provider) : base(provider)
+    {}
 
     public async ValueTask ExecuteAsync(IConsole console)
     {
@@ -78,7 +74,7 @@ public class ReportCommand : ICommand
             To = Date.Value.AddDays(1);
         }
 
-        var timeEntries = await GetTimeEntries(From.Value.ToDateTime(TimeOnly.MinValue), To.Value.ToDateTime(TimeOnly.MinValue));
+        var timeEntries = await GetTimeEntries(console, From.Value.ToDateTime(TimeOnly.MinValue), To.Value.ToDateTime(TimeOnly.MinValue));
 
         var tables = timeEntries
             .Select(e =>
@@ -98,6 +94,7 @@ public class ReportCommand : ICommand
         foreach (var table in tables)
         {
             var totalDuration = table
+                .Where(e => e.Start.HasValue && e.Stop.HasValue)
                 .Select(e => e.Stop - e.Start)
                 .Aggregate((aggregated, current) => aggregated + current)
                 .GetValueOrDefault();
@@ -113,15 +110,17 @@ public class ReportCommand : ICommand
         }
     }
 
-    private async ValueTask<List<TimeEntry>> GetTimeEntries(DateTime from, DateTime to)
+    private async ValueTask<List<TimeEntry>> GetTimeEntries(IConsole console, DateTime from, DateTime to)
     {
-        var togglClient = new TogglAsync(_Settings?.TogglSettings?.ApiToken);
+        // var spinner = new ConsoleSpinner(console, "Loading Toggl TimeEntries", ConsoleSpinner.PositionSpinner.Left);
+        // Task.Run(() => spinner.Turn());
+        var togglClient = await GetTogglClient(console);
         var timeEntries = await togglClient.TimeEntry.List(new TimeEntryParams
         {
             StartDate = from,
             EndDate = to
         });
-
+        // spinner.Stop("DONE");
         return timeEntries;
     }
 }

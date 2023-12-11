@@ -13,8 +13,7 @@ public class DateOnlyConverter : JsonConverter<DateOnly>
 
     public override DateOnly ReadJson(JsonReader reader, Type objectType, DateOnly existingValue, bool hasExistingValue, JsonSerializer serializer)
     {
-        DateOnly parsedDateOnly;
-        DateOnly.TryParseExact((string)reader.Value, Constants.DATE_FORMAT, out parsedDateOnly);
+        DateOnly.TryParseExact(reader.ToString(), Constants.DATE_FORMAT, out var parsedDateOnly);
         return parsedDateOnly;
     }
 }

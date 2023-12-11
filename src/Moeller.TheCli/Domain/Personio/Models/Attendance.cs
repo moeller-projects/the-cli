@@ -27,6 +27,6 @@ namespace Moeller.TheCli.Domain.Personio.Models
         public int? ProjectId { get; set; }
 
         [JsonProperty(PropertyName = "comment")]
-        public string Comment { get; set; }
+        public string? Comment { get; set; }
     }
 }

@@ -3,12 +3,9 @@ using CliFx.Attributes;
 using CliFx.Infrastructure;
 using Moeller.TheCli.Domain;
 using Moeller.TheCli.Domain.Models;
-using Moeller.TheCli.Domain.Personio;
-using Moeller.TheCli.Domain.Personio.Configuration;
 using Moeller.TheCli.Domain.Personio.Models;
 using Moeller.TheCli.Domain.Personio.Models.Request;
 using Moeller.TheCli.Infrastructure;
-using Moeller.TheCli.Infrastructure.Extensions;
 using Sharprompt;
 using Toggl;
 using Toggl.QueryObjects;
@@ -51,21 +48,14 @@ public class SyncTodayCommand : ICommand
 }
 
 [Command("sync", Description = "Sync Toggl Entries to Personio TimeTracking")]
-public class SyncCommand : ICommand
+public class SyncCommand : CommandBase, ICommand
 {
     [CommandParameter(0, Name = "Date", IsRequired = false)] public DateOnly? Date { get; set; }
     [CommandOption("from", 'f', Description = "From")] public DateOnly? From { get; set; }
     [CommandOption("to", 't', Description = "To")] public DateOnly? To { get; set; }
-
     
-    private readonly Settings _Settings;
-    private TogglAsync? _TogglClient;
-    private PersonioClient? _PersonioClient;
-
-    public SyncCommand(ConfigurationProvider provider)
-    {
-        _Settings = provider.Get();
-    }
+    public SyncCommand(ConfigurationProvider provider) : base(provider)
+    {}
     
     public async ValueTask ExecuteAsync(IConsole console)
     {
@@ -80,8 +70,8 @@ public class SyncCommand : ICommand
             To = Date.Value.AddDays(1);
         }
         
-        var timeEntries = await GetTimeEntries(console, From.Value.ToDateTime(TimeOnly.MinValue), To.Value.ToDateTime(TimeOnly.MinValue));
-        await DeleteExistingTimeEntries(console, From.Value.ToDateTime(TimeOnly.MinValue), To.Value.ToDateTime(TimeOnly.MinValue));
+        var timeEntries = await GetTimeEntries(console, From.GetValueOrDefault().ToDateTime(TimeOnly.MinValue), To.GetValueOrDefault().ToDateTime(TimeOnly.MinValue));
+        await DeleteExistingTimeEntries(console, From.GetValueOrDefault().ToDateTime(TimeOnly.MinValue), To.GetValueOrDefault().ToDateTime(TimeOnly.MinValue));
         await SyncTimeEntriesToPersonio(console, timeEntries);
     }
 
@@ -94,12 +84,12 @@ public class SyncCommand : ICommand
             EndDate = to,
             Limit = 200,
             Offset = 0,
-            EmployeeIds = new []{_Settings.PersonioSettings.EmployeeId}
+            EmployeeIds = new []{Settings.PersonioSettings.EmployeeId}
         });
 
         if (existingAttendances?.PagedList.TotalElements > 0)
         {
-            var deleteTasks = existingAttendances.PagedList.Data.Select(async a => await _PersonioClient.DeleteAttendancesAsync(a.Id, true)).ToArray();
+            var deleteTasks = existingAttendances.PagedList.Data.Select(async a => await personioClient.DeleteAttendancesAsync(a.Id, true)).ToArray();
             Task.WaitAll(deleteTasks);
         }
     }
@@ -114,39 +104,6 @@ public class SyncCommand : ICommand
         });
 
         return timeEntries;
-    }
-
-    private async Task<TogglAsync> GetTogglClient(IConsole console)
-    {
-        if (string.IsNullOrWhiteSpace(_Settings?.TogglSettings?.ApiToken))
-        {
-            await console.RespondWithFailureAsync("Toggl Connection not ready, please check your Api Token and feel free to re-init your cli");
-            Environment.Exit(-1);
-        }
-
-        return _TogglClient ??= new TogglAsync(_Settings?.TogglSettings?.ApiToken);
-    }
-    
-    private async Task<PersonioClient> GetPersonioClient(IConsole console)
-    {
-        if (string.IsNullOrWhiteSpace(_Settings?.PersonioSettings?.ClientId) || string.IsNullOrWhiteSpace(_Settings.PersonioSettings.ClientSecret))
-        {
-            await console.RespondWithFailureAsync("Personio Connection not ready, please check your Api Token and feel free to re-init your cli");
-            Environment.Exit(-1);
-        }
-
-        if (_PersonioClient is not null)
-            return _PersonioClient;
-        
-        _PersonioClient = new PersonioClient(new PersonioClientOptions(){ClientId = _Settings.PersonioSettings.ClientId, ClientSecret = _Settings.PersonioSettings.ClientSecret});
-        await _PersonioClient.AuthAsync();
-        if (!_PersonioClient.IsReady)
-        {
-            await console.RespondWithFailureAsync("Personio Connection not ready, please check your Api Token and feel free to re-init your cli");
-            Environment.Exit(-1);
-        }
-
-        return _PersonioClient;
     }
 
     private async ValueTask SyncTimeEntriesToPersonio(IConsole console, IEnumerable<TimeEntry> timeEntries)
@@ -185,7 +142,7 @@ public class SyncCommand : ICommand
 
         return groupedTimeEntries.Select(e => new Attendance()
         {
-            EmployeeId = _Settings.PersonioSettings.EmployeeId,
+            EmployeeId = Settings.PersonioSettings.EmployeeId,
             Date = e.Min(ste => DateOnly.FromDateTime(ste.Start)),
             StartTime = e.Min(m => new TimeSpan(m.Start.Hour, m.Start.Minute, m.Start.Second)),
             EndTime = e.Max(m => new TimeSpan(m.Stop.Hour, m.Stop.Minute, m.Stop.Second)),

@@ -13,7 +13,7 @@ public static class IConsoleExtesnions
         }
     }
     
-    public static Task RespondWithFailureAsync(this IConsole console, string message, Exception exception = null)
+    public static Task RespondWithFailureAsync(this IConsole console, string message, Exception? exception = null)
     {
         using (console.WithForegroundColor(ConsoleColor.Red))
         {

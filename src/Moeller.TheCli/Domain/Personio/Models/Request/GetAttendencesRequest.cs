@@ -8,6 +8,6 @@
         public DateTime? UpdatedTo { get; set; }
         public int Limit { get; set; }
         public int Offset { get; set; }
-        public IEnumerable<int> EmployeeIds { get; set; }
+        public IEnumerable<int>? EmployeeIds { get; set; }
     }
 }

@@ -8,7 +8,7 @@ namespace Moeller.TheCli.Domain.Personio.Models
         public int Id { get; set; }
 
         [JsonProperty(PropertyName = "name")]
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         /// <summary>
         /// family_care maternity_parental_leave child_care short_time_allowance 
@@ -17,7 +17,7 @@ namespace Moeller.TheCli.Domain.Personio.Models
         /// offsite_work other undefined
         /// </summary>
         [JsonProperty(PropertyName = "category")]
-        public string Category { get; set; }
+        public string? Category { get; set; }
 
         /// <summary>
         /// family_care_sick_leave individual_prohibition_of_employment maternity_protection_period 
@@ -26,13 +26,13 @@ namespace Moeller.TheCli.Domain.Personio.Models
         /// family_care_long_term paid_child_sick unpaid_child_sick undefined
         /// </summary>
         [JsonProperty(PropertyName = "legacy_category")]
-        public string LegacyCategory { get; set; }
+        public string? LegacyCategory { get; set; }
 
         /// <summary>
         /// day hour
         /// </summary>
         [JsonProperty(PropertyName = "unit")]
-        public string Unit { get; set; }
+        public string? Unit { get; set; }
 
         [JsonProperty(PropertyName = "half_day_requests_enabled")]
         public bool HalfDayRequestsEnabled { get; set; }
@@ -50,7 +50,7 @@ namespace Moeller.TheCli.Domain.Personio.Models
         /// disabled optional required
         /// </summary>
         [JsonProperty(PropertyName = "substitute_option")]
-        public string SubstituteOption { get; set; }
+        public string? SubstituteOption { get; set; }
 
         [JsonProperty(PropertyName = "approval_required")]
         public bool ApprovalRequired { get; set; }

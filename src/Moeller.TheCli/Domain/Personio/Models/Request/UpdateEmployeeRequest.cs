@@ -8,6 +8,6 @@ namespace Moeller.TheCli.Domain.Personio.Models.Request
         public int Id { get; set; }
 
         [JsonProperty(PropertyName = "employee")]
-        public Employee Employee { get; set; }
+        public Employee? Employee { get; set; }
     }
 }

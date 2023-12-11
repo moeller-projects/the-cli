@@ -11,8 +11,8 @@
         /// Minvalue = 0
         /// </summary>
         public int Offset { get; set; }
-        public string Email { get; set; }
+        public string? Email { get; set; }
         public DateTime? UpdatedSince { get; set; }
-        public IEnumerable<string> Attributes { get; set; }
+        public IEnumerable<string>? Attributes { get; set; }
     }
 }

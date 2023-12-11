@@ -8,6 +8,6 @@ namespace Moeller.TheCli.Domain.Personio.Models.Response
         public bool Success { get; set; }
 
         [JsonProperty(PropertyName = "data")]
-        public TokenData Data { get; set; }
+        public TokenData? Data { get; set; }
     }
 }
