@@ -20,9 +20,11 @@ public class Settings
 public class TogglSettings
 {
     public const string DATE_TIME_FORMAT = "MM/dd/yyyy HH:mm:ss";
-    
+
+    public string? Username { get; set; }
+    public string? Password { get; set; }
     public string? ApiToken { get; init; }
-    public int DefaultWorkSpace { get; init; }
+    public long DefaultWorkSpace { get; init; }
 }
 
 public class PersonioSettings

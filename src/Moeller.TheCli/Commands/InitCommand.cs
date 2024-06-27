@@ -7,21 +7,19 @@ using Moeller.TheCli.Domain.Personio;
 using Moeller.TheCli.Domain.Personio.Configuration;
 using Moeller.TheCli.Domain.Personio.Models.Request;
 using Moeller.TheCli.Infrastructure;
+using Moeller.TheCli.Infrastructure.Extensions;
 using Sharprompt;
-using Toggl;
+using TogglAPI.NetStandard.Api;
+using TogglAPI.NetStandard.Client;
 using IConsole = CliFx.Infrastructure.IConsole;
+using Task = System.Threading.Tasks.Task;
 
 namespace Moeller.TheCli.Commands;
 
-[Command("init", Description = "inits the app")]
-public class InitCommand : ICommand
+[Command("init", Description = "initializes the application")]
+public class InitCommand(ConfigurationProvider provider) : ICommand
 {
-    private readonly ConfigurationProvider _Provider;
-
-    public InitCommand(ConfigurationProvider provider)
-    {
-        _Provider = provider ?? throw new ArgumentNullException(nameof(provider));
-    }
+    private readonly ConfigurationProvider _Provider = provider ?? throw new ArgumentNullException(nameof(provider));
 
     public async ValueTask ExecuteAsync(IConsole console)
     {
@@ -31,16 +29,16 @@ public class InitCommand : ICommand
             if (!Prompt.Confirm("Tool is already configured. Do you really wanna overwrite it?"))
                 return;
         }
-        
+
         var togglSettings = await InitTogglSettings(console);
         var personioSettings = await InitPersonioSettings(console);
 
         var settings = new Settings(togglSettings, personioSettings);
-        
+
         await _Provider.SetAsync(settings);
         using (console.WithForegroundColor(ConsoleColor.Green))
         {
-            await console.Output.WriteLineAsync("> Successful! <");
+            await console.RespondWithSuccessfulAsync();
         }
     }
 
@@ -77,17 +75,21 @@ public class InitCommand : ICommand
 
     private static async Task<TogglSettings?> InitTogglSettings(IConsole console)
     {
-        var token = Prompt.Password("Please enter your Toggl API Token");
-        var togglClient = new TogglAsync(token);
-
-        var user = await togglClient.User.GetCurrent();
-        await console.Output.WriteLineAsync($"Hello {user.FullName}");
-
-        var workspaces = await togglClient.Workspace.List();
+        var username = Prompt.Input<string>("Please enter your Toggl Username");
+        var password = Prompt.Password("Please enter your Toggl Password");
+        
+        var spi = new ConsoleSpinner(console, "Initialising TogglClient");
+        Task.Run(() => spi.Turn());
+        Configuration.Default.Username = username?.Trim();
+        Configuration.Default.Password = password?.Trim();
+        var workspaceApi = new WorkspacesApi();
+        spi.Stop();
+        var workspaces = await workspaceApi.GetWorkspacesAsync();
         var currentWorkspace = Prompt.Select("Select your target WorkSpace", workspaces);
         var togglSettings = new TogglSettings()
         {
-            ApiToken = token,
+            Username = username?.Trim(),
+            Password = password?.Trim(),
             DefaultWorkSpace = currentWorkspace.Id.GetValueOrDefault()
         };
         return togglSettings;

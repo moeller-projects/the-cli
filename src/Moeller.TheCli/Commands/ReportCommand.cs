@@ -2,16 +2,16 @@ using System.Globalization;
 using CliFx;
 using CliFx.Attributes;
 using ConsoleTableExt;
+using Humanizer;
 using Moeller.TheCli.Domain;
 using Moeller.TheCli.Infrastructure;
-using Toggl;
-using Toggl.QueryObjects;
+using TogglAPI.NetStandard.Api;
+using TogglAPI.NetStandard.Model;
 using IConsole = CliFx.Infrastructure.IConsole;
-using Task = System.Threading.Tasks.Task;
 
 namespace Moeller.TheCli.Commands;
 
-[Command("report yesterday", Description = "todo")]
+[Command("report yesterday", Description = "gets the time entries for yesterday")]
 public class ReportYesterdayCommand : ICommand
 {
     private readonly ReportCommand _Command;
@@ -28,7 +28,7 @@ public class ReportYesterdayCommand : ICommand
     }
 }
 
-[Command("report today", Description = "todo")]
+[Command("report today", Description = "gets the time entries for a today")]
 public class ReportTodayCommand : ICommand
 {
     private readonly ReportCommand _Command;
@@ -45,7 +45,7 @@ public class ReportTodayCommand : ICommand
     }
 }
 
-[Command("report", Description = "todo")]
+[Command("report", Description = "gets the time entries for a specified date range")]
 public class ReportCommand : CommandBase, ICommand
 {
     [CommandParameter(0, Name = "Date", IsRequired = false)]
@@ -79,15 +79,15 @@ public class ReportCommand : CommandBase, ICommand
         var tables = timeEntries
             .Select(e =>
             {
-                DateTime? start = DateTime.TryParseExact(e.Start, TogglSettings.DATE_TIME_FORMAT, null, DateTimeStyles.None, out var parsedStart) ? parsedStart : null;
-                DateTime? stop = DateTime.TryParseExact(e.Stop, TogglSettings.DATE_TIME_FORMAT, null, DateTimeStyles.None, out var parsedStop) ? parsedStop : null;
+                DateTime? start = DateTime.TryParse(e.Start, out var parsedStart) ? parsedStart : null;
+                DateTime? stop = DateTime.TryParse(e.Stop, out var parsedStop) ? parsedStop : null;
                 return new
                 {
                     Description = e.Description,
                     Start = start,
                     Stop = stop,
-                    Duration = e.Duration is null or < 0 ? "running..." : TimeSpan.FromSeconds(e.Duration.GetValueOrDefault()).ToString("hh\\hmm\\m"),
-                    Tags = e.TagNames is not null && e.TagNames.Any() ? string.Join(", ", e.TagNames) : null
+                    Duration = e.Duration is null or < 0 ? "running..." : TimeSpan.FromSeconds(e.Duration.GetValueOrDefault()).Humanize(),
+                    Tags = e.Tags is not null && e.Tags.Any() ? string.Join(", ", e.Tags) : null
                 };
             }).GroupBy(g => DateOnly.FromDateTime(g.Start.GetValueOrDefault()));
 
@@ -102,25 +102,22 @@ public class ReportCommand : CommandBase, ICommand
             ConsoleTableBuilder
                 .From(table.OrderBy(o => o.Start).ThenBy(o => o.Stop).ToList())
                 .WithTitle(table.Key.ToString(), ConsoleColor.Magenta, TextAligntment.Left)
-                .WithFormat(ConsoleTableBuilderFormat.Alternative)
-                .AddRow("TOTAL", null, null, totalDuration.ToString("hh\\hmm\\m"), null)
+                .WithFormat(ConsoleTableBuilderFormat.Minimal)
+                .AddRow("TOTAL", null, null, totalDuration.Humanize(), null)
                 .ExportAndWriteLine();
 
             await console.Output.WriteLineAsync();
         }
+        
     }
 
-    private async ValueTask<List<TimeEntry>> GetTimeEntries(IConsole console, DateTime from, DateTime to)
+    private async ValueTask<List<ModelsTimeEntry>> GetTimeEntries(IConsole console, DateTime from, DateTime to)
     {
-        // var spinner = new ConsoleSpinner(console, "Loading Toggl TimeEntries", ConsoleSpinner.PositionSpinner.Left);
-        // Task.Run(() => spinner.Turn());
-        var togglClient = await GetTogglClient(console);
-        var timeEntries = await togglClient.TimeEntry.List(new TimeEntryParams
+        using (_ = new Spinner(console, "querying time entries from Toggl"))
         {
-            StartDate = from,
-            EndDate = to
-        });
-        // spinner.Stop("DONE");
-        return timeEntries;
+            SetupTogglClient(console);
+            var timeEntries = await new TimeEntriesApi().GetTimeEntriesAsync(null, null, from.ToString("yyyy-MM-dd"), to.ToString("yyyy-MM-dd"));
+            return timeEntries;
+        }
     }
 }

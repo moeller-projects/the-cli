@@ -1,4 +1,5 @@
-﻿using CliFx;
+﻿using System.Reflection;
+using CliFx;
 using JsonFlatFileDataStore;
 using Microsoft.Extensions.DependencyInjection;
 using Moeller.TheCli.Domain;
@@ -9,6 +10,8 @@ public static class Program
     public static async Task<int> Main(string[] args) =>
         await new CliApplicationBuilder()
             .AddCommandsFromThisAssembly()
+            .SetTitle("the CLI")
+            .SetExecutableName("the")
             .UseTypeActivator(commandTypes =>
             {
                 var configPath = Path.Combine(

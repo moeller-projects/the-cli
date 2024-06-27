@@ -25,14 +25,31 @@
     <ItemGroup>
         <PackageReference Include="CliFx" Version="2.3.5" />
         <PackageReference Include="ConsoleTableExt" Version="3.2.0" />
+        <PackageReference Include="Humanizer.Core" Version="2.14.1" />
         <PackageReference Include="JsonFlatFileDataStore" Version="2.4.2" />
+        <PackageReference Include="MessageFormat" Version="7.1.0" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-        <PackageReference Include="TogglAPI.NetStandard" Version="0.2.14" />
         <PackageReference Include="Sharprompt" Version="3.0.0-preview4" />
+        <PackageReference Include="TogglAPI.NetStandard" Version="0.4.18" />
         <PackageReference Include="TurnerSoftware.BuildVersioning" Version="0.4.0">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Update="Responds.resx">
+        <Generator>ResXFileCodeGenerator</Generator>
+        <LastGenOutput>Responds.Designer.cs</LastGenOutput>
+      </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Responds.Designer.cs">
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>Responds.resx</DependentUpon>
+      </Compile>
     </ItemGroup>
 </Project>

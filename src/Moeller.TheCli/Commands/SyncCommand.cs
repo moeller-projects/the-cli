@@ -7,13 +7,13 @@ using Moeller.TheCli.Domain.Personio.Models;
 using Moeller.TheCli.Domain.Personio.Models.Request;
 using Moeller.TheCli.Infrastructure;
 using Sharprompt;
-using Toggl;
-using Toggl.QueryObjects;
+using TogglAPI.NetStandard.Api;
+using TogglAPI.NetStandard.Model;
 using Task = System.Threading.Tasks.Task;
 
 namespace Moeller.TheCli.Commands;
 
-[Command("sync yesterday", Description = "todo")]
+[Command("sync yesterday", Description = "synchronizes the time entries for yesterday to Personio")]
 public class SyncYesterdayCommand : ICommand
 {
     private readonly SyncCommand _Command;
@@ -30,7 +30,7 @@ public class SyncYesterdayCommand : ICommand
     }
 }
 
-[Command("sync today", Description = "todo")]
+[Command("sync today", Description = "synchronizes the time entries for today to Personio")]
 public class SyncTodayCommand : ICommand
 {
     private readonly SyncCommand _Command;
@@ -47,7 +47,7 @@ public class SyncTodayCommand : ICommand
     }
 }
 
-[Command("sync", Description = "Sync Toggl Entries to Personio TimeTracking")]
+[Command("sync", Description = "synchronizes the time entries for a specific date range to Personio")]
 public class SyncCommand : CommandBase, ICommand
 {
     [CommandParameter(0, Name = "Date", IsRequired = false)] public DateOnly? Date { get; set; }
@@ -89,31 +89,42 @@ public class SyncCommand : CommandBase, ICommand
 
         if (existingAttendances?.PagedList.TotalElements > 0)
         {
+            await console.Output.WriteLineAsync($"Found {existingAttendances?.PagedList.TotalElements} existing Attendances in Personio");
+            if (!Prompt.Confirm("These will be deleted before syncing", true))
+                return;
+            
+            var spi = new ConsoleSpinner(console, "Deleting existing Personio Attendances");
+            Task.Run(() => spi.Turn());
             var deleteTasks = existingAttendances.PagedList.Data.Select(async a => await personioClient.DeleteAttendancesAsync(a.Id, true)).ToArray();
             Task.WaitAll(deleteTasks);
+            spi.Stop("DONE");
         }
     }
 
-    private async ValueTask<List<TimeEntry>> GetTimeEntries(IConsole console, DateTime from, DateTime to)
+    private async ValueTask<List<ModelsTimeEntry>> GetTimeEntries(IConsole console, DateTime from, DateTime to)
     {
-        var togglClient = await GetTogglClient(console);
-        var timeEntries = await togglClient.TimeEntry.List(new TimeEntryParams
-        {
-            StartDate = from,
-            EndDate = to
-        });
+        var spi = new ConsoleSpinner(console, "Query Time Entries from Toggl");
+        Task.Run(() => spi.Turn());
+        SetupTogglClient(console);
+        
+        var timeEntries = await new TimeEntriesApi().GetTimeEntriesAsync(null, null, from.ToString("yyyy-MM-dd"), to.ToString("yyyy-MM-dd"));
 
+        spi.Stop("DONE");
         return timeEntries;
     }
 
-    private async ValueTask SyncTimeEntriesToPersonio(IConsole console, IEnumerable<TimeEntry> timeEntries)
+    private async ValueTask SyncTimeEntriesToPersonio(IConsole console, IEnumerable<ModelsTimeEntry> timeEntries)
     {
         var personioClient = await GetPersonioClient(console);
         var attendances = ConvertToAttendances(timeEntries);
+        
+        var spi = new ConsoleSpinner(console, $"Syncing {timeEntries.Count()} TimeEntries as Attendances to Personio");
+        Task.Run(() => spi.Turn());
         await personioClient.CreateAttendancesAsync(new AddAttendancesRequest() {SkipApproval = true, Attendances = attendances});
+        spi.Stop("DONE");
     }
 
-    private IEnumerable<Attendance> ConvertToAttendances(IEnumerable<TimeEntry> timeEntries)
+    private IEnumerable<Attendance> ConvertToAttendances(IEnumerable<ModelsTimeEntry> timeEntries)
     {
         var simpleTimeEntries = timeEntries
             .Where(e => !string.IsNullOrWhiteSpace(e.Start) && !string.IsNullOrWhiteSpace(e.Stop) && e.Duration.GetValueOrDefault() > 0)
