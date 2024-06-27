@@ -1,6 +1,7 @@
 name: .NET Build Test and Publish
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
   pull_request:
@@ -54,3 +55,6 @@ jobs:
 
       - name: 📤 Publish NuGet to GitHub Packages
         run: dotnet nuget push "**/Moeller.TheCli.*.nupkg" -k ${{ secrets.GITHUB_TOKEN }} --source "github" --skip-duplicate --no-symbols
+
+      - name: 📤 Publish NuGet to NUGET Packages
+        run: dotnet nuget push "**/Moeller.TheCli.*.nupkg" -k ${{ secrets.NUGET_API_KEY }} --source "nuget.org" --skip-duplicate --no-symbols
