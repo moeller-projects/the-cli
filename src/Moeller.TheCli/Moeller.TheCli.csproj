@@ -10,9 +10,8 @@
 
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>the</ToolCommandName>
-        <VersionPrefix>0.0.1</VersionPrefix>
+        <VersionPrefix>0.1.0</VersionPrefix>
         <PackageTags>dotnet;cli;toggl;personio;laekkerai;aveato;csharp;roslyn</PackageTags>
-        <PackageIconUrl>https://avatars.githubusercontent.com/u/13099043</PackageIconUrl>
         <PackageProjectUrl>https://github.com/moeller-projects/the-cli</PackageProjectUrl>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryType>git</RepositoryType>

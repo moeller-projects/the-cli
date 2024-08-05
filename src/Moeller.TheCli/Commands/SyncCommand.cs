@@ -13,6 +13,45 @@ using Task = System.Threading.Tasks.Task;
 
 namespace Moeller.TheCli.Commands;
 
+[Command("sync month last", Description = "synchronizes the time entries for the last month to Personio")]
+public class SyncLastMonthCommand : ICommand
+{
+    private readonly SyncCommand _Command;
+
+    public SyncLastMonthCommand(SyncCommand command)
+    {
+        _Command = command ?? throw new ArgumentNullException(nameof(command));
+    }
+
+    public ValueTask ExecuteAsync(IConsole console)
+    {
+        var currentDate = DateTime.Now;
+        var lastMonthDate = currentDate.AddMonths(-1);
+        _Command.From = new DateOnly(lastMonthDate.Year, lastMonthDate.Month, 1);
+        _Command.To = _Command.From.Value.AddMonths(1).AddDays(-1);
+        return _Command.ExecuteAsync(console);
+    }
+}
+
+[Command("sync month current", Description = "synchronizes the time entries for the current month to Personio")]
+public class SyncCurrentMonthCommand : ICommand
+{
+    private readonly SyncCommand _Command;
+
+    public SyncCurrentMonthCommand(SyncCommand command)
+    {
+        _Command = command ?? throw new ArgumentNullException(nameof(command));
+    }
+
+    public ValueTask ExecuteAsync(IConsole console)
+    {
+        var currentDate = DateTime.Now;
+        _Command.From = new DateOnly(currentDate.Year, currentDate.Month, 1);
+        _Command.To = _Command.From.Value.AddMonths(1).AddDays(-1);
+        return _Command.ExecuteAsync(console);
+    }
+}
+
 [Command("sync yesterday", Description = "synchronizes the time entries for yesterday to Personio")]
 public class SyncYesterdayCommand : ICommand
 {
