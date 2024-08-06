@@ -2,6 +2,13 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Moeller.TheCli", "Moeller.TheCli\Moeller.TheCli.csproj", "{CC9CDC48-A295-4DB1-B8C8-3987B1687E54}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "common", "common", "{8C891967-B13D-4BC7-9CEB-B35BC42471B1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{28AB6BF4-03F4-4B94-A482-B80C52B29A8B}"
+	ProjectSection(SolutionItems) = preProject
+		..\.github\workflows\main.yml = ..\.github\workflows\main.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +19,8 @@ Global
 		{CC9CDC48-A295-4DB1-B8C8-3987B1687E54}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CC9CDC48-A295-4DB1-B8C8-3987B1687E54}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CC9CDC48-A295-4DB1-B8C8-3987B1687E54}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{28AB6BF4-03F4-4B94-A482-B80C52B29A8B} = {8C891967-B13D-4BC7-9CEB-B35BC42471B1}
 	EndGlobalSection
 EndGlobal
