@@ -42,7 +42,7 @@ public class InitCommand(ConfigurationProvider provider) : ICommand
         }
     }
 
-    private async ValueTask<PersonioSettings?> InitPersonioSettings(IConsole console)
+    private static async ValueTask<PersonioSettings?> InitPersonioSettings(IConsole console)
     {
         var clientId = Prompt.Password("Please enter your Personio ClientId");
         var clientSecret = Prompt.Password("Please enter your Personio ClientSecret");
@@ -80,12 +80,13 @@ public class InitCommand(ConfigurationProvider provider) : ICommand
         
         var spi = new ConsoleSpinner(console, "Initialising TogglClient");
         Task.Run(() => spi.Turn());
+        Configuration.Default.BasePath = "https://api.track.toggl.com/api/v9";
         Configuration.Default.Username = username?.Trim();
         Configuration.Default.Password = password?.Trim();
         var workspaceApi = new WorkspacesApi();
         spi.Stop();
         var workspaces = await workspaceApi.GetWorkspacesAsync();
-        var currentWorkspace = Prompt.Select("Select your target WorkSpace", workspaces);
+        var currentWorkspace = Prompt.Select("Select your target WorkSpace", workspaces, textSelector: workspace => workspace.Name);
         var togglSettings = new TogglSettings()
         {
             Username = username?.Trim(),
